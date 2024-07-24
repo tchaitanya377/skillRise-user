@@ -32,27 +32,10 @@ const Login = () => {
       const user = userCredential.user;
 
       const sessionRef = doc(db, 'sessions', user.uid);
-      const sessionDoc = await getDoc(sessionRef);
-
-      if (sessionDoc.exists()) {
-        const sessionData = sessionDoc.data();
-        const isSameDevice = sessionData.device === deviceId;
-
-        if (!isSameDevice) {
-          // Invalidate the old session
-          await setDoc(sessionRef, {
-            device: deviceId,
-            timestamp: new Date()
-          });
-          toast.info('Logged in on a new device. Old device session has been logged out.', { autoClose: 2000 });
-        }
-      } else {
-        // No session exists, create a new one
-        await setDoc(sessionRef, {
-          device: deviceId,
-          timestamp: new Date()
-        });
-      }
+      await setDoc(sessionRef, {
+        device: deviceId,
+        timestamp: new Date()
+      });
 
       navigate('/CoursePage');
       toast.success('Login successful!', { autoClose: 2000 });

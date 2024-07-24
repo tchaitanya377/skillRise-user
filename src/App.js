@@ -1,7 +1,13 @@
 // App.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { auth, db } from './Firebase';
 import Aboutus from './components/Aboutus';
 import Blog from './components/Blog';
 import Contactus from './components/Contactus';
@@ -20,12 +26,53 @@ import CoureseStart from './components/CoureseStart';
 import CoursePage from './components/CoursePage';
 import CourseOverview from './components/CourseOverview';
 
+// SessionValidator component to handle session validation and logout
+const SessionValidator = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const getDeviceId = () => {
+      let deviceId = localStorage.getItem('device-id');
+      if (!deviceId) {
+        deviceId = uuidv4();
+        localStorage.setItem('device-id', deviceId);
+      }
+      return deviceId;
+    };
+
+    const deviceId = getDeviceId();
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const sessionRef = doc(db, 'sessions', user.uid);
+        const unsubscribeSession = onSnapshot(sessionRef, (doc) => {
+          if (doc.exists()) {
+            const sessionData = doc.data();
+            if (sessionData.device !== deviceId) {
+              auth.signOut().then(() => {
+                localStorage.removeItem('device-id');
+                navigate('/');
+                toast.info('You have been logged out due to login from another device.');
+              });
+            }
+          }
+        });
+        return () => unsubscribeSession();
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, [navigate]);
+
+  return null;
+};
 
 function App() {
   return (
     <Router>
       <div className="App">
         <Navbar />
+        <SessionValidator />
         <Routes>
           {/* <Route path="/" element={<Home />} />
           <Route path="/blog" element={<Blog />} />
@@ -45,10 +92,10 @@ function App() {
           <Route path="/Myaccount/CourseOverview/:id" element={<CourseOverview />} />
         </Routes>
         <Footer />
+        <ToastContainer /> {/* Toast container for displaying messages */}
       </div>
     </Router>
   );
 }
 
 export default App;
-

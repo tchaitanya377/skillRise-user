@@ -65,11 +65,11 @@ function Navbar() {
             {isOpen && (
                 <div className="md:hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full my-16 text-center bg-white shadow-lg">
                     <nav className="px-4 py-2 flex flex-col space-y-2 h-screen">
-                        <Link to="/" className="text-black hover:text-gray-700" onClick={closeMenu}>Home</Link>
-                        <Link to="/programs" className="text-black hover:text-gray-700" onClick={closeMenu}>Programs</Link>
+                        <Link to="/CoursePage" className="text-black hover:text-gray-700" onClick={closeMenu}>Home</Link>
+                        {/* <Link to="/programs" className="text-black hover:text-gray-700" onClick={closeMenu}>Programs</Link>
                         <Link to="/blog" className="text-black hover:text-gray-700" onClick={closeMenu}>Blog</Link>
                         <Link to="/about-us" className="text-black hover:text-gray-700" onClick={closeMenu}>About Us</Link>
-                        <Link to="/contact-us" className="text-black hover:text-gray-700" onClick={closeMenu}>Contact Us</Link>
+                        <Link to="/contact-us" className="text-black hover:text-gray-700" onClick={closeMenu}>Contact Us</Link> */}
                         <Link to="/login" className="text-black hover:text-gray-700" onClick={closeMenu}>My Account</Link>
 
                     </nav>
