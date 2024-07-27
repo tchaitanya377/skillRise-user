@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../Firebase';
+import { doc, getDoc,setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db, auth } from '../Firebase'; // Ensure to import auth from firebase
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const CourseOverview = () => {
   const { id: courseId } = useParams();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('context'); // Default tab is 'context'
+  const [isPurchased, setIsPurchased] = useState(false); // State to track if the course is purchased
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -38,6 +41,17 @@ const CourseOverview = () => {
   
         const courseData = docSnap.data();
         setCourse(courseData); 
+
+        // Check if the course is purchased
+        const user = auth.currentUser;
+        if (user) {
+          const purchasedCoursesRef = collection(db, `users/${user.uid}/purchasedCourses`);
+          const purchasedCoursesSnapshot = await getDocs(query(purchasedCoursesRef, where('__name__', '==', courseId)));
+          if (!purchasedCoursesSnapshot.empty) {
+            setIsPurchased(true);
+          }
+        }
+
         setLoading(false);
       } catch (error) {
         setLoading(false);
@@ -46,6 +60,24 @@ const CourseOverview = () => {
   
     fetchCourseData();
   }, [courseId]);
+
+  const handleBuy = async (courseId) => {
+    const user = auth.currentUser;
+    if (user) {
+      try {
+        const courseRef = doc(db, `users/${user.uid}/purchasedCourses/${courseId}`);
+        await setDoc(courseRef, {
+          purchasedAt: new Date()
+        });
+        setIsPurchased(true); // Set the course as purchased
+        toast.success(`Course ${courseId} purchased!`);
+      } catch (error) {
+        toast.error('Error purchasing course');
+      }
+    } else {
+      toast.error('User not authenticated');
+    }
+  };
   
   if (loading) {
     return <div>Loading...</div>;
@@ -64,6 +96,15 @@ const CourseOverview = () => {
         />
         <div className="w-full md:w-2/3 pl-4">
           <h2 className="text-xl font-bold">{course.courseName}</h2>
+          <p className="text-lg mt-2">{course.courseDescription}</p>
+          {!isPurchased && (
+            <button
+              onClick={() => handleBuy(courseId)}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors duration-300 mt-4"
+            >
+              Buy
+            </button>
+          )}
         </div>
       </div>
 
@@ -80,7 +121,7 @@ const CourseOverview = () => {
             className={`flex-1 p-2 rounded ${activeTab === 'recordings' ? 'bg-blue-200' : 'bg-gray-200'}`}
             onClick={() => handleTabChange('recordings')}
           >
-            RECORDINGS
+            LIVE RECORDINGS & SESSIONS
           </button>
           <button
             className={`flex-1 p-2 rounded ${activeTab === 'assignments' ? 'bg-blue-200' : 'bg-gray-200'}`}
@@ -91,96 +132,97 @@ const CourseOverview = () => {
         </div>
 
         {activeTab === 'context' && (
-  <div className="p-4">
-    {/* Rendering of context section */}
-    {course.subCourses.map((subCourse, index) => (
-      <div key={index} className="mb-4">
-        <button
-          className="flex justify-between items-center w-full text-left bg-white text-gray-800 hover:text-blue-500 focus:outline-none px-4 py-2 rounded-md"
-          onClick={() => toggleSection(index)}
-        >
-          <span className="font-semibold text-lg">{subCourse.name}</span>
-          <svg
-            className={`w-6 h-6 transition-transform ${subCourse.isOpen ? 'transform rotate-90' : ''}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path fillRule="evenodd" d="M5.293 5.293a1 1 0 011.414 0L10 8.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-        {subCourse.isOpen && (
-          <div className="mt-2 space-y-2">
-            {subCourse.topics.map((topic, topicIndex) => (
-              <div key={topicIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
-                <span className="text-gray-800">{topic.name}</span>
-                <Link 
-  to={`/Myaccount/Course/start/${encodeURIComponent(topic.videoUrl)}`}
-  target="_blank" 
-  rel="noopener noreferrer" 
-  className="text-blue-500 hover:text-blue-600"
->
-  Go to Lecture
-</Link>
+          <div className="p-4">
+            {/* Rendering of context section */}
+            {course.subCourses.map((subCourse, index) => (
+              <div key={index} className="mb-4">
+                <button
+                  className="flex justify-between items-center w-full text-left bg-white text-gray-800 hover:text-blue-500 focus:outline-none px-4 py-2 rounded-md"
+                  onClick={() => toggleSection(index)}
+                >
+                  <span className="font-semibold text-lg">{subCourse.name}</span>
+                  <svg
+                    className={`w-6 h-6 transition-transform ${subCourse.isOpen ? 'transform rotate-90' : ''}`}
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path fillRule="evenodd" d="M5.293 5.293a1 1 0 011.414 0L10 8.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                {subCourse.isOpen && (
+                  <div className="mt-2 space-y-2">
+                    {subCourse.topics.map((topic, topicIndex) => (
+                      <div key={topicIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
+                        <span className="text-gray-800">{topic.name}</span>
+                        {isPurchased && (
+                          <Link 
+                            to={`/Myaccount/Course/start/${encodeURIComponent(topic.videoUrl)}`}
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-blue-500 hover:text-blue-600"
+                          >
+                            Go to Lecture
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'recordings' && (
+          <div className="p-4 border rounded-lg">
+            {/* Rendering of recordings section */}
+            {course.subCourses.map((subCourse, index) => (
+              <div key={index} className="mb-4">
+                {subCourse.additionalContents
+                  .filter(content => content.type === 'recordings')
+                  .map((content, contentIndex) => (
+                    <div key={contentIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
+                      <span className="text-gray-800">{content.name}</span>
+                      {isPurchased && (
+                        <Link 
+                          to={`/Myaccount/Course/start/${encodeURIComponent(content.value)}`}
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-blue-500 hover:text-blue-600"
+                        >
+                          Go to Lecture
+                        </Link>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === 'assignments' && (
+          <div className="p-4 border rounded-lg">
+            {/* Rendering of assignments section */}
+            {course.subCourses.map((subCourse, index) => (
+              <div key={index} className="mb-4">
+                {subCourse.additionalContents
+                  .filter(content => content.type === 'assignment')
+                  .map((content, contentIndex) => (
+                    <div key={contentIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
+                      <span className="text-gray-800">{content.name}</span>
+                      {isPurchased && (
+                        <a href={content.value} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600">
+                          View Assignment
+                        </a>
+                      )}
+                    </div>
+                  ))}
               </div>
             ))}
           </div>
         )}
       </div>
-    ))}
-  </div>
-)}
-
-{activeTab === 'recordings' && (
-  <div className="p-4 border rounded-lg">
-    {/* <h3 className="font-bold">Recordings</h3> */}
-    {/* Rendering of recordings section */}
-    {course.subCourses.map((subCourse, index) => (
-      <div key={index} className="mb-4">
-        {/* <h4 className="text-lg font-semibold">{subCourse.name}</h4> */}
-        {subCourse.additionalContents
-          .filter(content => content.type === 'recordings')
-          .map((content, contentIndex) => (
-            <div key={contentIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
-              <span className="text-gray-800">{content.type}</span>
-              <Link 
-  to={`/Myaccount/Course/start/${encodeURIComponent(content.value)}`}
-  target="_blank" 
-  rel="noopener noreferrer" 
-  className="text-blue-500 hover:text-blue-600"
->
-  Go to Lecture
-</Link>
-            </div>
-          ))}
-      </div>
-    ))}
-  </div>
-)}
-
-{activeTab === 'assignments' && (
-  <div className="p-4 border rounded-lg">
-    {/* <h3 className="font-bold">Assignments</h3> */}
-    {/* Rendering of assignments section */}
-    {course.subCourses.map((subCourse, index) => (
-      <div key={index} className="mb-4">
-        {/* <h4 className="text-lg font-semibold">{subCourse.name}</h4> */}
-        {subCourse.additionalContents
-          .filter(content => content.type === 'assignment')
-          .map((content, contentIndex) => (
-            <div key={contentIndex} className="flex items-center justify-between bg-white px-4 py-2 rounded-md">
-              <span className="text-gray-800">{content.type}</span>
-              <a href={content.value} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600">
-                View Assignment
-              </a>
-            </div>
-          ))}
-      </div>
-    ))}
-  </div>
-)}
-
-
-      </div>
+      <ToastContainer /> {/* Toast container for displaying messages */}
     </div>
   );
 };

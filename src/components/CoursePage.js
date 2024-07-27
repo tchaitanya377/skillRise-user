@@ -1,18 +1,10 @@
+// src/components/CoursePage.js
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { initializeApp } from 'firebase/app';
-// import MyNav from './MyNav';
-
-// const firebaseConfig = {
-//   apiKey: "AIzaSyA6hi5WniSmIBsPCwcqk_QVizh8yHcYM88",
-//   authDomain: "ravuru-ccbcd.firebaseapp.com",
-//   projectId: "ravuru-ccbcd",
-//   storageBucket: "ravuru-ccbcd.appspot.com",
-//   messagingSenderId: "438776822141",
-//   appId: "1:438776822141:web:31b8db8d2b789959003414",
-//   measurementId: "G-9TDRW616T8"
-// };
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBO-0m_dczIjwuiU8fj0-ZaWLUthpBQV3U",
@@ -49,30 +41,52 @@ const CoursePage = () => {
     fetchData();
   }, []);
 
+  const handleBuy = (courseId) => {
+    // Implement the purchase logic here
+    toast.success(`Course ${courseId} purchased!`);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
 
   return (
     <>
-    {/* <MyNav /> */}
-    <div className="p-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {courses.map((course) => (
-          <Link
-            to={{
-              pathname: `/Myaccount/CourseOverview/${course.id}`,
-              state: { courseId: course.id } // Pass the course ID as state
-            }}
-            key={course.id}
-            className="p-4 border rounded shadow"
-          >
-            <img src={course.courseThumbnailURL} alt={course.courseName} className="w-full h-24 sm:h-32 object-cover mb-2 rounded" />
-            <p className="text-sm sm:text-base">{course.courseName}</p>
-          </Link>
-        ))}
+      <div className="p-8 bg-gray-100 min-h-screen">
+        <h1 className="text-4xl font-bold text-center mb-8">Our Courses</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {courses.map((course) => (
+            <div key={course.id} className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <img
+                src={course.courseThumbnailURL}
+                alt={course.courseName}
+                className="w-full h-40 object-cover mb-4 rounded-lg"
+              />
+              <h3 className="text-2xl font-bold mb-2">{course.courseName}</h3>
+              <p className="text-gray-700 mb-4">{course.courseDescription}</p>
+              {/* <p className="text-lg font-semibold mb-4">Price: ₹{course.price}</p> */}
+              <div className="flex justify-between">
+                <button
+                  onClick={() => handleBuy(course.id)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors duration-300"
+                >
+                  Buy
+                </button>
+                <Link
+                  to={{
+                    pathname: `/Myaccount/CourseOverview/${course.id}`,
+                    state: { courseId: course.id } // Pass the course ID as state
+                  }}
+                  className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors duration-300"
+                >
+                  More
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+      <ToastContainer /> {/* Toast container for displaying messages */}
     </>
   );
 }
